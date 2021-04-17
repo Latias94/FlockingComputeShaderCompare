@@ -10,7 +10,7 @@ Tiny/
 # Visual Studio cache directory
 .idea/
 .vscode/
-Assets/Plugins/Editor/JetBrains/
+Assets/Plugins/Editor/JetBrains
 
 # Gradle cache directory
 .gradle/

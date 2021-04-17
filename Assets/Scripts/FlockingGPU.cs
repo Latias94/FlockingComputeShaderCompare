@@ -23,6 +23,7 @@ public class FlockingGPU : MonoBehaviour
         _kernelHandle = shader.FindKernel("CSMain");
 
         uint x;
+        // 获取 Compute Shader 中定义的 numthreads
         shader.GetKernelThreadGroupSizes(_kernelHandle, out x, out _, out _);
         _groupSizeX = Mathf.CeilToInt(boidsCount / (float) x);
         // 塞满每个线程组，免得 Compute Shader 中有线程读不到数据，造成读取数据越界
@@ -48,9 +49,11 @@ public class FlockingGPU : MonoBehaviour
 
     void InitShader()
     {
+        // 定义大小，鸟的数量和每个鸟结构的大小，一个 Vector3 就是 3 * sizeof(float)
+        // 10000 只鸟，每只占 6 * 4 bytes，总共也就占 0.234mib GPU 显存 
         _boidsBuffer = new ComputeBuffer(_numOfBoids, 6 * sizeof(float));
         _boidsBuffer.SetData(_boidsArray);
-
+        // 设置 buffer 到 Compute Shader，同时设置要调用的计算的函数 Kernel
         shader.SetBuffer(_kernelHandle, "boidsBuffer", _boidsBuffer);
         shader.SetFloat("boidSpeed", boidSpeed);
         shader.SetVector("flockPosition", target.transform.position);
@@ -60,15 +63,16 @@ public class FlockingGPU : MonoBehaviour
 
     void Update()
     {
+        // 设置每一帧会变的变量
         shader.SetFloat("deltaTime", Time.deltaTime);
         shader.SetVector("flockPosition", target.transform.position);
-
+        // 调用 Compute Shader Kernel 来计算
         shader.Dispatch(_kernelHandle, _groupSizeX, 1, 1);
 
-        // 阻塞等待 Compute Shader 数据传回来
+        // 阻塞等待 Compute Shader 计算结果从 GPU 传回来
         _boidsBuffer.GetData(_boidsArray);
 
-        // 应用位置和旋转到 GameObject
+        // 设置鸟的 position 和 rotation
         for (int i = 0; i < _boidsArray.Length; i++)
         {
             _boids[i].transform.localPosition = _boidsArray[i].position;
@@ -84,6 +88,7 @@ public class FlockingGPU : MonoBehaviour
     {
         if (_boidsBuffer != null)
         {
+            // 用完主动释放 buffer
             _boidsBuffer.Dispose();
         }
     }
